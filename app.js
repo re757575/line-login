@@ -9,7 +9,9 @@ const app = new Koa();
 const router = new Router();
 
 app.use(views(__dirname + '/views-ejs', {
-  extension: 'ejs'
+  map: {
+    html: 'ejs'
+  }
 }));
 
 const client_id = line.clientId;
