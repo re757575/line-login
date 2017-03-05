@@ -1,4 +1,5 @@
 const Koa = require('koa');
+const views = require('koa-views');
 const Router = require('koa-router');
 const logger = require('koa-logger');
 const request = require('request-promise');
@@ -6,6 +7,10 @@ const line = require('./config.json').line;
 
 const app = new Koa();
 const router = new Router();
+
+app.use(views(__dirname + '/views-ejs', {
+  extension: 'ejs'
+}));
 
 const client_id = line.clientId;
 const client_secret = line.clientSecret;
@@ -102,18 +107,25 @@ router.get('/', async function (ctx, next) {
   const oauth_url = `https://access.line.me/dialog/oauth/weblogin?
 		response_type=code&client_id=${client_id}&redirect_uri=${redirect_uri}&state=${times}`;
 
+  let html = '';
   if (access_token && await verifyToken(access_token)) {
-    ctx.body = `<html><body>
+    html = `<html><body>
 			<p>登入成功</p>
 			name: ${userName}</br>
 			<img src='${userImg}'></br>
 			<a href="/revoke">Revoking tokens</a>
 		</body></html>`;
   } else {
-    ctx.body = `<html><body>
+    html = `<html><body>
 			<a href='${oauth_url}'>line login</a>
 		</body></html>`
   }
+
+  await ctx.render('index', {
+    oauth_url: oauth_url,
+    html: html
+  });
+
   await next();
 });
 
