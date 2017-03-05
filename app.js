@@ -27,12 +27,12 @@ let refresh_token = '';
  *
  */
 function showTokenInfo() {
-	console.log('--------------- showTokenInfo ---------------');
-	console.log('access_token: ', access_token);
-	console.log('refresh_token: ', refresh_token);
-	console.log('userName: ', userName);
-	console.log('userImg: ', userImg);
-	console.log('----------------------------------------------');
+  console.log('--------------- showTokenInfo ---------------');
+  console.log('access_token: ', access_token);
+  console.log('refresh_token: ', refresh_token);
+  console.log('userName: ', userName);
+  console.log('userImg: ', userImg);
+  console.log('----------------------------------------------');
 }
 
 /**
@@ -42,19 +42,24 @@ function showTokenInfo() {
  * @returns
  */
 async function verifyToken(token) {
-	console.log('----------------- verifyToken -----------------');
-	const postData = {
-		access_token: token
-	};
+  console.log('----------------- verifyToken -----------------');
 
-	try {
-		let body = await request.post(verify_url, { form: postData });
-		console.log('token 驗證成功');
-		return true;
-	} catch(err) {
-		console.log('token 驗證失效');
-		return false;
-	}
+  const postData = {
+    access_token: token
+  };
+
+  try {
+    let body = await request.post(verify_url, {
+      form: postData
+    });
+    console.log('token 驗證成功');
+
+    return true;
+  } catch (err) {
+    console.log('token 驗證失效');
+
+    return false;
+  }
 }
 
 /**
@@ -64,121 +69,126 @@ async function verifyToken(token) {
  */
 async function getProfile(token) {
 
-	console.log('----------------- getProfile -----------------');
+  console.log('----------------- getProfile -----------------');
 
-	const options = {
-			uri: get_profile_url,
-			headers: {
-			'User-Agent': 'Request-Promise',
-					'Authorization': `Bearer ${access_token}`
-			}
-	};
+  const options = {
+    uri: get_profile_url,
+    headers: {
+      'User-Agent': 'Request-Promise',
+      'Authorization': `Bearer ${access_token}`
+    }
+  };
 
-	try {
-		let body = await request(options);
-		let json = JSON.parse(body);
-		userName = json.displayName;
-		userImg = json.pictureUrl;
-		return true;
-	} catch(err) {
-		console.log(err);
-		return false;
-	}
+  try {
+    let body = await request(options);
+    let json = JSON.parse(body);
+    userName = json.displayName;
+    userImg = json.pictureUrl;
+
+    return true;
+  } catch (err) {
+    console.log(err);
+
+    return false;
+  }
 }
 
-router.get('/', async function(ctx, next) {
-	ctx.type = 'html';
+router.get('/', async function (ctx, next) {
+  ctx.type = 'html';
 
-	showTokenInfo();
+  showTokenInfo();
 
-	const times = new Date().getTime();
-	const oauth_url = `https://access.line.me/dialog/oauth/weblogin?
+  const times = new Date().getTime();
+  const oauth_url = `https://access.line.me/dialog/oauth/weblogin?
 		response_type=code&client_id=${client_id}&redirect_uri=${redirect_uri}&state=${times}`;
 
-	if (access_token && await verifyToken(access_token)) {
-		ctx.body = `<html><body>
+  if (access_token && await verifyToken(access_token)) {
+    ctx.body = `<html><body>
 			<p>登入成功</p>
 			name: ${userName}</br>
 			<img src='${userImg}'></br>
 			<a href="/revoke">Revoking tokens</a>
 		</body></html>`;
-	} else {
-		ctx.body = `<html><body>
+  } else {
+    ctx.body = `<html><body>
 			<a href='${oauth_url}'>line login</a>
 		</body></html>`
-	}
-	await next();
+  }
+  await next();
 });
 
 // 撤銷 token
-router.get('/revoke', async function(ctx, next) {
+router.get('/revoke', async function (ctx, next) {
 
-	showTokenInfo();
+  showTokenInfo();
 
-	const postData = {
-		refresh_token: refresh_token
-	};
+  const postData = {
+    refresh_token: refresh_token
+  };
 
-	try {
-		let body = await request.post(revoke_url, { form: postData });
-		ctx.redirect('/');
-	} catch(err) {
-		ctx.body = err.message;
-	}
+  try {
+    let body = await request.post(revoke_url, {
+      form: postData
+    });
+    ctx.redirect('/');
+  } catch (err) {
+    ctx.body = err.message;
+  }
 });
 
 // line login
-router.get('/auth', async function(ctx, next) {
+router.get('/auth', async function (ctx, next) {
 
-	console.log('query string: ', ctx.query);
+  console.log('query string: ', ctx.query);
 
-	showTokenInfo();
-	const code = ctx.query.code;
-	const state = ctx.query.state;
+  showTokenInfo();
+  const code = ctx.query.code;
+  const state = ctx.query.state;
 
-	const postData = {
-		grant_type: grant_type,
-		code: code,
-		client_id: client_id,
-		client_secret: client_secret,
-		redirect_uri: redirect_uri
-	};
+  const postData = {
+    grant_type: grant_type,
+    code: code,
+    client_id: client_id,
+    client_secret: client_secret,
+    redirect_uri: redirect_uri
+  };
 
-	try {
-		// get access token
-		let body = await request.post(access_token_url,
-			{ form: postData }, function (error, response, body) {});
+  try {
+    // get access token
+    let body = await request.post(access_token_url, {
+      form: postData
+    }, function (error, response, body) {});
 
-		let json = JSON.parse(body);
-		access_token = json.access_token;
- 		refresh_token = json.refresh_token;
+    let json = JSON.parse(body);
+    access_token = json.access_token;
+    refresh_token = json.refresh_token;
 
-		// get profile
-		if (await getProfile()) {
-			ctx.status = 301;
-			ctx.redirect('/');
-		} else {
-			ctx.body = 'get profile error';
-		}
+    // get profile
+    if (await getProfile()) {
+      ctx.status = 301;
+      ctx.redirect('/');
+    } else {
+      ctx.body = 'get profile error';
+    }
 
-	} catch(err) {
-		ctx.body = err.message;
-		console.log('Get an error:', err.message);
-	}
+  } catch (err) {
+    ctx.body = err.message;
+    console.log('Get an error:', err.message);
+  }
 });
 
 app
-	.use(logger())
+  .use(logger())
   .use(router.routes())
   .use(router.allowedMethods())
-	.use(async (ctx, next) => {
-		if ('404' == ctx.status) {
-			ctx.status = 404;
-			ctx.body = 'page not found';
-			await next();
-		}
-	})
-	.listen(3000, () => {
-		console.info('server start on http://127.0.0.1:3000');
-		showTokenInfo();
-	});
+  .use(async(ctx, next) => {
+    if ('404' == ctx.status) {
+      ctx.status = 404;
+      ctx.body = 'page not found';
+      await next();
+    }
+  })
+  .listen(3000, () => {
+    console.info('server start on http://127.0.0.1:3000');
+    showTokenInfo();
+  });
