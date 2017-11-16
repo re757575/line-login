@@ -24,6 +24,7 @@ const get_profile_url = 'https://api.line.me/v2/profile';
 const verify_url = 'https://api.line.me/v2/oauth/verify';
 const revoke_url = 'https://api.line.me/v2/oauth/revoke';
 
+let userId = ''
 let userName = ''
 let userImg = '';
 let access_token = '';
@@ -89,6 +90,7 @@ async function getProfile(token) {
   try {
     let body = await request(options);
     let json = JSON.parse(body);
+    userId = json.userId;
     userName = json.displayName;
     userImg = json.pictureUrl;
 
@@ -113,6 +115,7 @@ router.get('/', async function (ctx, next) {
   if (access_token && await verifyToken(access_token)) {
     html = `<html><body>
 			<p>登入成功</p>
+			id: ${userId}</br>
 			name: ${userName}</br>
 			<img src='${userImg}'></br>
 			<a href="/revoke">Revoking tokens</a>
